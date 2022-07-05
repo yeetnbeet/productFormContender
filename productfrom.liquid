@@ -1,0 +1,289 @@
+{% assign current_variant = product.selected_or_first_available_variant %}
+
+<form
+  action="/cart/add"
+  method="post"
+  enctype="multipart/form-data"
+  id="AddToCartForm"
+  data-component="ProductFormOld"
+  class="Product__form"
+  data-product-type="{{ product.type }}"
+  data-productid="{{product.id}}"
+  data-product-handle="{{product.handle}}">
+
+  
+  <div data-price-wrapper>
+     <span 
+      data-product-price 
+      >
+      {{ current_variant.price | money }}
+    </span> 
+
+    
+      <span 
+        data-compare-price>
+        {% if current_variant.compare_at_price > current_variant.price %}
+          {{ current_variant.compare_at_price | money }}
+        {% endif %} 
+      </span>
+    
+
+   
+  </div>
+  
+  <div class="Product__tags">
+    <div class="Product__brand">Brand: <a href="/collections/all/{{product.vendor | handleize}}"><span>{{product.vendor}}</span></a></div>
+    <div class="Product__categories">Categories:
+      {% for tag in product.tags %}
+        {% assign ref = tag | split: ':' | first %}
+        {% if ref == 'collection'%}
+          <a href="/collections/{{tag | replace: ':', '-' }}"><span>{% render 'collection-tags-alias', tag: tag %}</span></a>
+        {% endif %}
+      {% endfor %} 
+    </div>
+  </div>
+  
+  {% comment %} Set variable with options in available variants {% endcomment %}
+  {% assign availableOptions = "" %}
+  {% for v in product.variants %}
+    {% if v.available %}
+      {% for option in v.options %}
+        {% assign availableOptions = availableOptions | append: option | append: '|'%}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+  {% assign availableOptions = availableOptions | split: '|' %}
+
+  <div class="Form__row">
+    {% unless product.has_only_default_variant  or product.available == false%}
+      {% for option in product.options_with_values %}
+        {% comment %}
+          All inputs that have `name=options[Name]` will be picked up by
+          ProductForm, registered as an option input, and made available
+          at ProductForm.optionsInputs
+        {% endcomment %}
+
+        <noscript data-product-variants>
+          {{product.variants | json}}
+        </noscript>
+
+        {%- capture params -%}
+            {
+              "index": {{forloop.index0 }},
+              "label": "{{ option.name }}",
+              "selected": {{ option.selected_value | json | escape }}
+            }
+          {%- endcapture -%}
+          <div
+            data-component="ProductSelector Product__variantSelector"
+            class="js-enabled Form__input selector-wrapper js Product__form__unit Product__form__option option-{{ forloop.index }}"
+            data-product-variant-selector-ui>
+
+            <label for="Option{{ option.position }}">
+              {{ option.name }}
+            </label>
+            
+            {% comment %} Wrapper For Custom Dropdown {% endcomment %}
+            {% assign opt = "" %}
+            {%- for val in option.values -%} 
+              {% if val contains '#MWS' %}{% continue %}{% endif %}
+                {%- if availableOptions contains val -%}
+                  {% capture the_option %}{'value':'{{val}}','disabled': false}{% endcapture %}
+                  {% assign opt = opt | append: the_option | append: '|'%}
+                {%- else -%}
+                  {% capture the_option %}{'value':'{{val}}','disabled': true}{% endcapture %}
+                  {% assign opt = opt | append: the_option | append: '|' %}
+                {%- endif -%}
+              {%- endfor -%}
+            <div
+              class="component-wrapper"
+              data-params='{{ params }}'
+              data-options='{{opt | split: '|' | json | escape }}'
+              data-option='{{option.position}}'></div>  
+            {% comment %} Original Select Hidden {% endcomment %}
+
+            <select
+              id="option{{ option.position }}"
+              class="u-hidden"
+              name="options[{{ option.name | escape }}]"
+              data-index="option{{ option.position }}"
+              data-single-option-selector>
+                <option value="" disabled selected>Select your option</option>
+              {% for value in option.values %}
+               {% if value contains '#MWS' %}{% continue %}{% endif %}
+                <option
+                  
+                  value="{{ value | escape }}"
+                  {% if option.selected_value == value %}selected="selected"{% endif %}>
+                    {{ value }}
+                </option>
+              {% endfor %}
+            </select>
+            
+          </div>
+          {% if forloop.last %}
+            <button name="clear" class="Button" data-style="outline dark">Clear</button>
+          {% endif %}
+
+      {% endfor %}
+    {% endunless %}
+    
+    <span class="mw-product-options"></span>     
+    
+    {% comment %}
+      In order for this form to submit, it needs to contain an input with name="id".
+      ProductForm() will automatically create this input (or make sure it has the
+      right value set if it already exists) on form submit based on the
+      currently selected variant. However, if JS is disabled we need a fallback.
+
+      Include a single <select> element which allows users to select all variants
+      as a fallback and present it only when JS is disabled. In addition,
+      make sure you hide the option inputs declared above, like we do with the
+      `.js-enabled` class which only shows its contents when JS is enabled.
+    {% endcomment %}
+
+    
+    <select name="id" class="u-hidden variantsDropdown" product-variant-selector>
+      {% for variant in product.variants %}
+        <option
+          {% if variant == current_variant %}selected="selected"{% endif %}
+          data-title="{{ variant.title }}"
+          value="{{ variant.id }}">
+            {{ variant.title }}
+        </option>
+      {% endfor %}
+    </select>
+  
+    
+
+    {% comment %}
+      Any input with `name="quantity"` will be picked up by ProductForm and
+      registered as a quantity input. If a quantity input is not included, a
+      default quantity of 1 is assumed.
+    {% endcomment %}
+    
+    <div class="Form__input u-hidden" data-size="col1-2">
+      <label for="quantity">{{ 'products.product.quantity' | t }}</label>
+      <input type="number" id="quantity" name="quantity" value="1" min="1">
+    </div>
+  
+
+  </div>
+    
+  {% comment %} Carlos Added: 5/11/21 {% endcomment %}
+  {% for t in product.tags %}
+    {% if t contains 'virtual-stock' %}
+        <h3 style="color:#ec2A27;display:flex;align-items:center;flex-wrap: wrap;margin-top:0px;margin-bottom:60px;cursor:normal;font-size:1.2rem;" class="Button">
+          Frame available.&nbsp;<br><a href="mailto:info@contenderbicycles.com?subject={{product.title}} | Estimated build time inquiry">Contact us for estimated build times.</a>
+    	</h3>
+    {% endif %}
+  {% endfor %}
+
+  <a class="Button" data-style="underline red" href="#more-info">More Information</a>
+  
+  <div class="Buttons">
+  {% if in_store_only %}
+    <a 
+      data-action="{ type: 'Modal', target: '{{product.handle}}', action: 'toggle' }"
+      href="#" class="Button" 
+      data-style="outline dark" data-layout="block"
+    >In-Store Purchase Only - Contact for availability</a>  
+  {% else %}
+    <button
+      id="AddToCart"
+      type="submit"
+      class="Button addtocart"
+      data-style="solid red"
+      data-layout="big block"
+      data-add-to-cart
+      {% unless current_variant.available %}disabled="disabled"{% endunless %}>
+      
+      <span data-add-to-cart-text>
+        {% if current_variant.available %}{{ 'products.product.add_to_cart' | t }}{% else %}Unavailable{% endif %}
+      </span>
+      
+    </button>
+
+    <a 
+      class="Button klaviyo-bis-trigger"
+      href="#"
+      data-style="outline red"
+    >Notify Me When Available</a>
+
+    {% if product_is_bike %}
+      <a 
+        data-action="{ type: 'Modal', target: '{{product.handle}}', action: 'toggle' }"
+        href="#" class="Button" 
+        data-style="outline dark" data-layout="block"
+      >call to customize</a>  
+    {% endif %}
+    {% comment %} Zane Added: 5/11/21 | Tiago Updated: 5/14/21 {% endcomment %}
+      {% for t in product.tags %}
+        {% if t contains 'pre-orderable' %}
+          {% assign is_pre_orderable = true %}
+          <button class="Button" data-style="text red" data-layout="noLayout" data-action="{ type: 'Modal', target: 'preorder-policy', action: 'toggle' }">
+            Our Pre-order Bike Policies
+          </button>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+    {% comment %}
+      Don't forget about the Dynamic Checkout buttons!
+      https://help.shopify.com/en/themes/customization/store/dynamic-checkout-buttons
+      NOTE: Hidden due to incompatibility with Customizely
+    {% endcomment %}
+    {% comment %} {{ form | payment_button }} {% endcomment %}
+  </div>
+</form>
+
+{% if is_pre_orderable %}
+  <div class="Modal Modal--policy" data-layout="medium" data-component="Modal" data-identifier="preorder-policy">
+    <div class="Modal__box">
+      {% assign preorder_policy_page = pages['backordered-pre-ordered-bike-policy'] %}
+      <div class="Modal__header">
+        <div class="inner">
+          <h4>{{preorder_policy_page.title}}</h4>
+          <button class="Button Button--icon close-modal" data-action="{ type: 'Modal', target: 'preorder-policy', action: 'toggle' }" aria-label="close">
+            <svg viewBox='0 0 20 20' class='icon' width='1em' height='1em'>
+              <use href='#close'></use>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="Modal__content">
+        {{preorder_policy_page.content}}
+      </div>
+    </div>
+    <span class="backdrop"></span>
+  </div>  
+{% endif %}
+
+
+{% if product.type == 'Bikes' %}
+<div class="BikeSizer">
+  <button class="Button" data-style="underline black" data-action="{ type: 'Modal', target: 'bike-sizer', action: 'toggle' }">Not sure what size? Try our Bike Sizer.</button>
+
+  <div class="Modal" data-layout="big" data-component="Modal" data-identifier="bike-sizer">
+    <div class="Modal__box">
+    
+      <div class="Modal__header">
+        <div class="inner">
+          {% comment %} <h4>Bike Sizer</h4> {% endcomment %}
+          <button class="Button Button--icon close-modal" data-action="{ type: 'Modal', target: 'bike-sizer', action: 'toggle' }" aria-label="close">
+            <svg viewBox='0 0 20 20' class='icon' width='1em' height='1em'>
+              <use href='#close'></use>
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <div class="Modal__content">
+        <iframe src="https://contenderfitfinder.netlify.app/" title="Bike Sizer" width="100%"></iframe>
+      </div>
+    </div>
+    <span class="backdrop"></span>
+  </div>
+
+</div>
+{% endif %}
