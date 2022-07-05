@@ -262,28 +262,6 @@
 
 {% if product.type == 'Bikes' %}
 <div class="BikeSizer">
-  <button class="Button" data-style="underline black" data-action="{ type: 'Modal', target: 'bike-sizer', action: 'toggle' }">Not sure what size? Try our Bike Sizer.</button>
-
-  <div class="Modal" data-layout="big" data-component="Modal" data-identifier="bike-sizer">
-    <div class="Modal__box">
-    
-      <div class="Modal__header">
-        <div class="inner">
-          {% comment %} <h4>Bike Sizer</h4> {% endcomment %}
-          <button class="Button Button--icon close-modal" data-action="{ type: 'Modal', target: 'bike-sizer', action: 'toggle' }" aria-label="close">
-            <svg viewBox='0 0 20 20' class='icon' width='1em' height='1em'>
-              <use href='#close'></use>
-            </svg>
-          </button>
-        </div>
-      </div>
-      
-      <div class="Modal__content">
-        <iframe src="https://contenderfitfinder.netlify.app/" title="Bike Sizer" width="100%"></iframe>
-      </div>
-    </div>
-    <span class="backdrop"></span>
-  </div>
-
+  <button class="Button" onclick="window.open('https://contenderfitfinder.netlify.app/','_blank')" data-style="underline black" data-action="{ type: 'Modal', target: 'bike-sizer', action: 'toggle' }">Not sure what size? Try our Bike Sizer.</button>
 </div>
 {% endif %}
